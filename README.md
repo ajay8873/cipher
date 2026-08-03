@@ -82,8 +82,8 @@
 ### Steps
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Sidhu1232/cipher-khata.git
-   cd cipher-khata
+   git clone https://github.com/ajay8873/cipher.git
+   cd cipher
    ```
 
 2. Fetch dependencies:

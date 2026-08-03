@@ -3,8 +3,8 @@ class AppConfig {
   static const String currentVersion = "1.0.0";
 
   /// GitHub Repository details for auto-update checks
-  static const String githubRepoOwner = "Sidhu1232"; // Will update dynamically or set default
-  static const String githubRepoName = "cipher-khata";
+  static const String githubRepoOwner = "ajay8873";
+  static const String githubRepoName = "cipher";
 
   /// Official Cloudflare Pages Download Website URL
   static const String downloadWebsiteUrl = "https://cipher-khata.pages.dev";
