@@ -1,0 +1,48 @@
+name: khata
+description: "Automated SMS Expense Tracker with Background Overlay, SQLite & DeepSeek AI"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local Storage & Database
+  sqflite: ^2.3.0
+  path: ^1.9.0
+  shared_preferences: ^2.2.2
+
+  # Cloud Database
+  supabase_flutter: ^2.3.0
+
+  # Overlay & Background SMS & Notification Execution
+  flutter_overlay_window: ^0.4.0
+  telephony: ^0.2.0
+  permission_handler: ^11.3.0
+  flutter_notification_listener: ^1.4.0
+
+  # State Management & Network
+  provider: ^6.1.1
+  http: ^1.2.0
+  intl: ^0.19.0
+
+  # Icons & UI Polish
+  google_fonts: ^6.1.0
+  cupertino_icons: ^1.0.6
+  fl_chart: ^0.68.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+dependency_overrides:
+  app_links: 6.3.2
+
+flutter:
+  uses-material-design: true
+

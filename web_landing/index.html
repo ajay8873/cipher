@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cipher — Intelligent Automated Expense & Credit Tracker</title>
+  <meta name="description" content="Cipher is a 100% private, on-device automated expense and credit tracking Android app powered by SMS & UPI Push Notification parsing.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0F0F1A;
+      --card-bg: #1E1E2E;
+      --primary: #6C5CE7;
+      --primary-gradient: linear-gradient(135deg, #6C5CE7 0%, #8E44AD 100%);
+      --accent-green: #00B894;
+      --accent-red: #FF7675;
+      --text: #F5F6FA;
+      --subtext: #A0A5B5;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navbar */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 15, 26, 0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.4rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary-gradient);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(108, 92, 231, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(108, 92, 231, 0.5);
+    }
+
+    .btn-secondary {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 96px 0 64px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 30px;
+      background: rgba(108, 92, 231, 0.15);
+      border: 1px solid rgba(108, 92, 231, 0.3);
+      color: #A29BFE;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 24px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #A0A5B5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--subtext);
+      max-width: 680px;
+      margin: 0 auto 36px;
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* Features Grid */
+    .features {
+      padding: 64px 0 96px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .section-header h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .section-header p {
+      color: var(--subtext);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(108, 92, 231, 0.4);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+    }
+
+    .icon-box {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: rgba(108, 92, 231, 0.15);
+      color: #A29BFE;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .feature-card p {
+      color: var(--subtext);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Privacy Banner */
+    .privacy-banner {
+      background: linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(142, 68, 173, 0.15) 100%);
+      border: 1px solid rgba(108, 92, 231, 0.3);
+      border-radius: 28px;
+      padding: 48px;
+      text-align: center;
+      margin-bottom: 96px;
+    }
+
+    .privacy-banner h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .privacy-banner p {
+      color: var(--subtext);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--subtext);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+      .hero p {
+        font-size: 1rem;
+      }
+      .privacy-banner {
+        padding: 32px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header>
+    <div class="container nav-wrapper">
+      <a href="#" class="logo">
+        <div class="logo-icon">C</div>
+        <span>Cipher</span>
+      </a>
+      <a href="https://github.com/Sidhu1232/cipher-khata/releases/latest" class="btn btn-primary">
+        Download APK
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        ✨ 100% Privacy-First & On-Device Automated Tracking
+      </div>
+      <h1>Intelligent Expense & Credit Tracker for Android</h1>
+      <p>Automatically record bank debits & incoming UPI credits from PhonePe, Google Pay, Paytm, Navi, and BHIM using smart SMS & push notification parsing.</p>
+      <div class="hero-actions">
+        <a href="https://github.com/Sidhu1232/cipher-khata/releases/latest" class="btn btn-primary">
+          📥 Download Latest Release APK
+        </a>
+        <a href="https://github.com/Sidhu1232/cipher-khata" class="btn btn-secondary">
+          ⭐ Star on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Built for Speed, Privacy & Precision</h2>
+        <p>Never manually log an expense or miss an incoming credit again.</p>
+      </div>
+
+      <div class="grid">
+        <div class="feature-card">
+          <div class="icon-box">💬</div>
+          <h3>Bank SMS Auto-Tracking</h3>
+          <p>Scans incoming and historical bank SMS messages to instantly detect amount, merchant name, date, and transaction type (Debit vs Credit).</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-box">🔔</div>
+          <h3>PhonePe & UPI Notification Listener</h3>
+          <p>Reads status bar push notifications from PhonePe, GPay, Paytm, Navi, CRED, BHIM & Super.money so incoming credits are never missed when SMS fails.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-box">⚡</div>
+          <h3>Smart Hybrid Deduplication</h3>
+          <p>Combines SMS & push notification feeds with a 5-minute time/amount window to prevent duplicate transaction entries.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-box">🛡️</div>
+          <h3>100% On-Device Privacy</h3>
+          <p>Your financial data, SMS text, and transaction logs NEVER leave your phone. Everything is stored locally in an encrypted SQLite database.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-box">📊</div>
+          <h3>Analytics & Category Charts</h3>
+          <p>Visual donut charts, today's summary cards, and quick date filters (Daily, Monthly, Last Month, Custom Calendar) for full financial clarity.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-box">🤖</div>
+          <h3>DeepSeek AI Parsing Engine</h3>
+          <p>Optional AI fallback parsing service using DeepSeek API for complex or non-standard bank transaction message formats.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy Banner -->
+  <div class="container">
+    <div class="privacy-banner">
+      <h2>Your Data Belongs Strictly to You</h2>
+      <p>Cipher operates entirely offline with zero cloud server dependencies required. No registration, no user accounts, and zero ad tracking.</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>© 2026 Cipher (Khata) • Open Source & Released under MIT License</p>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+buildscript {
+    ext.kotlin_version = '2.1.0'
+    ext.compileSdkVersion = 34
+    ext.targetSdkVersion = 34
+    ext.minSdkVersion = 23
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+ext.compileSdkVersion = 34
+ext.targetSdkVersion = 34
+ext.minSdkVersion = 23
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+subprojects { project ->
+    def configureProject = {
+        if (project.plugins.hasPlugin('com.android.library')) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+            if (project.plugins.hasPlugin('kotlin-android') || project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
+                project.android {
+                    kotlinOptions {
+                        jvmTarget = '17'
+                    }
+                }
+            }
+        }
+    }
+    if (project.state.executed) {
+        configureProject()
+    } else {
+        project.afterEvaluate { configureProject() }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
