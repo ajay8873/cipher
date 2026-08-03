@@ -440,10 +440,37 @@
     }
 
     @media (max-width: 992px) {
-      .hero-title { font-size: 52px; }
-      .banner-title { font-size: 40px; }
-      .stats-grid, .features-grid { grid-template-columns: 1fr; }
+      .hero-title { font-size: 48px; }
+      .banner-title { font-size: 36px; }
+      .stats-grid, .features-grid { grid-template-columns: repeat(2, 1fr); }
       .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 0 16px; }
+      .nav-wrapper { height: 64px; }
+      .nav-menu { display: none; }
+      .nav-actions .btn-ghost { display: none; }
+      .btn { width: 100%; justify-content: center; }
+      .hero { padding: 56px 0 48px; }
+      .hero-title { font-size: 32px; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 16px; }
+      .hero-subtext { font-size: 15px; margin-bottom: 28px; }
+      .hero-ctas { flex-direction: column; width: 100%; gap: 12px; }
+      .stats-grid, .features-grid { grid-template-columns: 1fr; gap: 16px; }
+      .stat-card { padding: 24px 20px; }
+      .stat-number { font-size: 38px; }
+      .features-section { padding: 48px 0; }
+      .section-title { font-size: 28px; }
+      .section-subtitle { font-size: 15px; margin-bottom: 36px; }
+      .feature-card { padding: 24px 20px; }
+      .privacy-card { padding: 32px 20px; border-radius: 16px; }
+      .privacy-card h2 { font-size: 26px; }
+      .privacy-card p { font-size: 15px; }
+      .gradient-banner { padding: 48px 20px; border-radius: 20px; margin-bottom: 48px; }
+      .banner-title { font-size: 28px; }
+      .banner-subtext { font-size: 15px; margin-bottom: 24px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; margin-bottom: 36px; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
     }
   </style>
 </head>
