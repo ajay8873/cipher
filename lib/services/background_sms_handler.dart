@@ -88,7 +88,7 @@ class BackgroundSmsListenerService {
 
         // Skip non-financial SMS early (avoids expensive DB + parse calls)
         final isFinancial = RegExp(
-          r'(debited|credited|spent|paid|sent|withdrawn|transferred|received|deposited)',
+          r'(debited|credited|debit|credit|received\s+a\s+payment)',
           caseSensitive: false,
         ).hasMatch(body);
         if (!isFinancial) continue;

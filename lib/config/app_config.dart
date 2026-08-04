@@ -1,6 +1,6 @@
 class AppConfig {
   /// Current App Version (Matches pubspec.yaml version)
-  static const String currentVersion = "1.0.0";
+  static const String currentVersion = "1.1.0";
 
   /// GitHub Repository details for auto-update checks
   static const String githubRepoOwner = "ajay8873";

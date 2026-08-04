@@ -22,6 +22,7 @@ class NotificationParserService {
   /// Known package names for major Indian UPI payment apps
   static final Map<String, String> supportedUpiApps = {
     'com.phonepe.app': 'PhonePe',
+    'com.phonepe.app.business': 'PhonePe Business',
     'com.google.android.apps.nbu.paisa.user': 'Google Pay',
     'net.one97.paytm': 'Paytm',
     'com.navi.passport': 'Navi UPI',
@@ -40,7 +41,9 @@ class NotificationParserService {
 
   /// Check if the package is a recognized UPI application
   static bool isSupportedPackage(String packageName) {
-    return supportedUpiApps.containsKey(packageName.toLowerCase());
+    final lowerPkg = packageName.toLowerCase();
+    if (supportedUpiApps.containsKey(lowerPkg)) return true;
+    return lowerPkg.contains('phonepe') || lowerPkg.contains('paytm') || lowerPkg.contains('gpay');
   }
 
   /// Primary notification parser
@@ -50,7 +53,8 @@ class NotificationParserService {
     required String text,
   }) {
     final combinedText = '$title $text'.trim();
-    final appName = supportedUpiApps[packageName.toLowerCase()] ?? 'UPI App';
+    final lowerPkg = packageName.toLowerCase();
+    final appName = supportedUpiApps[lowerPkg] ?? (lowerPkg.contains('phonepe') ? 'PhonePe' : 'UPI App');
     final lower = combinedText.toLowerCase();
 
     // ── 0. Anti-Spam / Non-Financial Filtering ────────────────────────────
@@ -83,7 +87,7 @@ class NotificationParserService {
       amount = double.tryParse(amountStr) ?? 0.0;
     }
 
-    if (amount < 1.0) {
+    if (amount <= 0.0) {
       return NotificationParserResult(
         amount: 0.0,
         merchant: 'Unknown',
@@ -118,7 +122,6 @@ class NotificationParserService {
       );
     }
 
-    // If both keywords exist, check order (e.g., "Received payment from John" vs "You paid John")
     final type = isCredit ? 'credit' : 'debit';
 
     // ── 3. Merchant / Sender Name Extraction ───────────────────────────────
@@ -139,8 +142,6 @@ class NotificationParserService {
   String _extractNameFromNotification(String title, String text, bool isCredit) {
     final fullText = '$title $text'.trim();
 
-    // 1. PhonePe / Navi / GPay common formats:
-    // Credit: "Received ₹500 from Ramesh Kumar" / "Ramesh Kumar sent you ₹500"
     if (isCredit) {
       final fromMatch = RegExp(r'from\s+([A-Za-z0-9\s._-]+?)(?=\s+(?:via|thru|on|ref|for|using|\d)|$)', caseSensitive: false).firstMatch(fullText);
       if (fromMatch != null && fromMatch.group(1) != null) {
@@ -150,7 +151,7 @@ class NotificationParserService {
         }
       }
 
-      final sentYouMatch = RegExp(r'([A-Za-z0-9\s._-]+?)\s+sent\s+(?:you\s+)?(?:₹|Rs)', caseSensitive: false).firstMatch(fullText);
+      final sentYouMatch = RegExp(r'([A-Za-z0-9\s._-]+?)\s+(?:sent|paid)\s+(?:you\s+)?(?:₹|Rs)', caseSensitive: false).firstMatch(fullText);
       if (sentYouMatch != null && sentYouMatch.group(1) != null) {
         final name = sentYouMatch.group(1)!.trim();
         if (name.isNotEmpty && name.length > 2) {
@@ -158,7 +159,6 @@ class NotificationParserService {
         }
       }
     } else {
-      // Debit: "Paid ₹200 to Zomato" / "Payment of ₹150 to Swiggy successful"
       final toMatch = RegExp(r'to\s+([A-Za-z0-9\s._-]+?)(?=\s+(?:via|thru|on|ref|for|successful|using|\d)|$)', caseSensitive: false).firstMatch(fullText);
       if (toMatch != null && toMatch.group(1) != null) {
         final name = toMatch.group(1)!.trim();
@@ -168,12 +168,11 @@ class NotificationParserService {
       }
     }
 
-    // Fallback: title often contains the contact/merchant name (e.g. Title: "Ramesh Kumar", Body: "Received ₹500")
     if (title.isNotEmpty && !title.toLowerCase().contains('received') && !title.toLowerCase().contains('paid') && !title.toLowerCase().contains('payment')) {
       return title.trim();
     }
 
-    return 'UPI Merchant';
+    return 'PhonePe User';
   }
 
   String _inferCategory(String merchant, String text) {

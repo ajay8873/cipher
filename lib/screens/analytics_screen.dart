@@ -279,6 +279,79 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           _legend(creditMap, fmt, isDark, isCredit: true),
                           const SizedBox(height: 24),
                         ],
+
+                        // ── Transactions List Section for Selected Range ──────────────────────
+                        _sectionTitle("Transactions (${filteredTx.length})", isDark),
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: isDark
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredTx.length,
+                            separatorBuilder: (_, __) => Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+                            itemBuilder: (ctx, idx) {
+                              final tx = filteredTx[idx];
+                              final isCredit = tx.type == 'credit';
+                              final txDate = DateTime.tryParse(tx.date);
+                              final dateStr = txDate != null
+                                  ? DateFormat('dd MMM yyyy, hh:mm a').format(txDate)
+                                  : tx.date;
+
+                              return ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                leading: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: isCredit
+                                      ? const Color(0xFF00B894).withOpacity(0.15)
+                                      : const Color(0xFFFF7675).withOpacity(0.15),
+                                  child: Icon(
+                                    isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                    color: isCredit ? const Color(0xFF00B894) : const Color(0xFFFF7675),
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Text(
+                                  tx.merchant.isNotEmpty ? tx.merchant : "Bank Transaction",
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  "$dateStr • ${tx.accountType}",
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                trailing: Text(
+                                  "${isCredit ? '+' : '-'}₹${tx.amount.toStringAsFixed(2)}",
+                                  style: TextStyle(
+                                    color: isCredit ? const Color(0xFF00B894) : const Color(0xFFFF7675),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                         const SizedBox(height: 40),
                       ],
                     ),

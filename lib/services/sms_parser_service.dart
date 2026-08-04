@@ -28,124 +28,159 @@ class SmsParserService {
                 ? DeepSeekService(apiKey: AppConfig.deepSeekApiKey)
                 : null);
 
-
-  /// Primary hybrid SMS parser
+  /// Primary strict SMS parser matching ONLY defined bank templates
   Future<SmsParserResult> parseSms(String smsBody) async {
     final cleanSms = smsBody.trim();
 
     // ── 0. Anti-spam / Fraud / Exclusion Filter ────────────────────────────
-    // 0a. Malicious / Shortened Links (e.g. bit.ly, tinyurl, t.co, http/https URLs)
     final containsShortenedOrWebLink = RegExp(
       r'(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|is\.gd|buff\.ly|ow\.ly|http:\/\/|https:\/\/|www\.)',
       caseSensitive: false,
     ).hasMatch(cleanSms);
 
-    // 0b. Promotional, offer, recharge reminders, loan/finance offers, OTPs, wallet receipts (Pine Labs, Apay, etc.), client code promo
     final spamOrPromoRegExp = RegExp(
-      r'\b(recharge|pack|validity|data|offer|cashback\s+offer|discount|promo|coupon|deal|plan|loan|apply\s+now|credit\s+card\s+limit|opt\s+out|pre-approved|finance\s+offer|claim\s+now|free|cashback\s+upto|earn|points|rewards|win|client\s+code|mapped\s+under|pine\s+labs|apay\s+balance|amazon\s+pay\s+balance|wallet|cashback)\b',
+      r'\b(recharge|pack|validity|data|offer|cashback\s+offer|discount|promo|coupon|deal|plan|loan|apply\s+now|credit\s+card\s+limit|opt\s+out|pre-approved|finance\s+offer|claim\s+now|free|cashback\s+upto|earn|points|rewards|win|client\s+code|mapped\s+under|pine\s+labs|apay\s+balance|amazon\s+pay\s+balance|wallet)\b',
       caseSensitive: false,
     );
 
-    // 0c. Mobile number in place of account number (e.g., A/C 9876543210 or 10-digit mobile numbers as sender/account)
     final mobileNumberAccountPattern = RegExp(
       r'(?:a/c|acct|account)\s*(?:no\.?|num\.?)?\s*[:\s]*[6-9]\d{9}\b',
       caseSensitive: false,
     ).hasMatch(cleanSms);
 
-    // 0d. OTP / Verification code check
-    final isOtpOnly = RegExp(r'\b(otp|verification\ +code|secret\ +code|one\ +time\ +password)\b', caseSensitive: false).hasMatch(cleanSms)
-        && !RegExp(r'\b(debited|credited)\b', caseSensitive: false).hasMatch(cleanSms);
+    final isOtpOnly = RegExp(
+      r'\b(otp|verification\s+code|secret\s+code|one\s+time\s+password)\b',
+      caseSensitive: false,
+    ).hasMatch(cleanSms) && !RegExp(r'\b(debited|credited|debit|credit)\b', caseSensitive: false).hasMatch(cleanSms);
 
     if (containsShortenedOrWebLink || spamOrPromoRegExp.hasMatch(cleanSms) || mobileNumberAccountPattern || isOtpOnly) {
-      return SmsParserResult(
-        amount: 0.0,
-        merchant: 'Unknown',
-        category: 'Non-financial',
-        type: 'none',
-        accountType: 'Unknown',
-        isParsedSuccessfully: false,
+      return _unparsed();
+    }
+
+    // ── Strict Template Pattern Matching ─────────────────────────────────────
+    // Template 1: IPPB Debit
+    // "A/C X6022 Debit Rs.20.00 for UPI to pankaj prakash on 03-08-26 Ref 563134185246. Avl Bal Rs.160.63. If not you? SMS FREEZE "full a/c" to 7669034700-IPPB"
+    final ippbDebitPattern = RegExp(
+      r'A/C\s+[\w\d]+\s+Debit\s+Rs\.?\s*([\d,]+(?:\.\d{1,2})?)\s+for\s+UPI\s+to\s+(.+?)\s+on\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}(?:.*?(?:Ref|IPPB))?',
+      caseSensitive: false,
+    );
+    final matchIppbDebit = ippbDebitPattern.firstMatch(cleanSms);
+    if (matchIppbDebit != null && cleanSms.toUpperCase().contains('IPPB')) {
+      final amtStr = matchIppbDebit.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      final merchant = matchIppbDebit.group(2)!.replaceAll(RegExp(r'\s+Ref.*', caseSensitive: false), '').trim();
+      return _buildResult(
+        amount: amt,
+        merchant: merchant,
+        category: _inferCategory(merchant, cleanSms),
+        type: 'debit',
+        accountType: 'UPI',
       );
     }
 
-    // ── 1. Transaction Type Detection ──────────────────────────────────────
-    final hasDebitKeyword = RegExp(
-      r'\b(debited|debit|spent|paid|payment|sent|withdrawn|transferred|purchase)\b',
+    // Template 2: IPPB Credit
+    // "You have received a payment of Rs. 20.00 in a/c X6022 on 31/07/2026 19:22 from md ghulam moinuddin thru IPPB. Info: UPI/CREDIT/110332422882.-IPPB"
+    final ippbCreditPattern = RegExp(
+      r'You\s+have\s+received\s+a\s+payment\s+of\s+Rs\.?\s*([\d,]+(?:\.\d{1,2})?)\s+in\s+a/c\s+[\w\d]+\s+on\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}(?:\s+\d{2}:\d{2})?\s+from\s+(.+?)\s+thru\s+IPPB',
       caseSensitive: false,
-    ).hasMatch(cleanSms);
-
-    final hasCreditKeyword = RegExp(
-      r'\b(credited|credit|received|deposited|added|refund)\b',
-      caseSensitive: false,
-    ).hasMatch(cleanSms);
-
-    // Amount pattern: Rs / INR / Rs. followed by numbers
-    final hasAmount = RegExp(
-      r'(?:RS\.?|INR\.?|Rs\.?)\s*[\d,]+(?:\.\d{1,2})?',
-      caseSensitive: false,
-    ).hasMatch(cleanSms);
-
-    // Must have BOTH a financial keyword AND an amount to proceed
-    if ((!hasDebitKeyword && !hasCreditKeyword) || !hasAmount) {
-      return SmsParserResult(
-        amount: 0.0,
-        merchant: 'Unknown',
-        category: 'Non-financial',
-        type: 'none',
-        accountType: 'Unknown',
-        isParsedSuccessfully: false,
+    );
+    final matchIppbCredit = ippbCreditPattern.firstMatch(cleanSms);
+    if (matchIppbCredit != null) {
+      final amtStr = matchIppbCredit.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      final merchant = matchIppbCredit.group(2)!.trim();
+      return _buildResult(
+        amount: amt,
+        merchant: merchant,
+        category: _inferCategory(merchant, cleanSms),
+        type: 'credit',
+        accountType: 'UPI',
       );
     }
 
-    final type = hasDebitKeyword ? 'debit' : 'credit';
-
-    // ── 2. Amount Extraction ───────────────────────────────────────────────
-    double amount = 0.0;
-    final amountMatch = RegExp(
-      r'(?:RS\.?|INR\.?|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)',
+    // Template 3: Canara Bank Debited
+    // "An amount of INR 654.00 has been DEBITED to your account XXXX5269 on 10/06/2026. Total Avail.bal INR 4,864.84.Dial 1930 to report cyber fraud - Canara Bank"
+    final canaraDebitedPattern = RegExp(
+      r'An\s+amount\s+of\s+INR\s*([\d,]+(?:\.\d{1,2})?)\s+has\s+been\s+DEBITED\s+to\s+your\s+account\s+[\w\d]+\s+on\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}',
       caseSensitive: false,
-    ).firstMatch(cleanSms);
-
-    if (amountMatch != null) {
-      final amountStr = amountMatch.group(1)!.replaceAll(',', '');
-      amount = double.tryParse(amountStr) ?? 0.0;
-    }
-
-    if (amount < 1.0) {
-      return SmsParserResult(
-        amount: 0.0,
-        merchant: 'Unknown',
-        category: 'Non-financial',
-        type: 'none',
-        accountType: 'Unknown',
-        isParsedSuccessfully: false,
+    );
+    final matchCanaraDebited = canaraDebitedPattern.firstMatch(cleanSms);
+    if (matchCanaraDebited != null && cleanSms.toLowerCase().contains('canara')) {
+      final amtStr = matchCanaraDebited.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      return _buildResult(
+        amount: amt,
+        merchant: 'Canara Bank Debit',
+        category: 'General',
+        type: 'debit',
+        accountType: 'Bank Account',
       );
     }
 
-    // ── 3. Account Type Extraction ─────────────────────────────────────────
-    String accountType = 'Bank Account';
-    if (cleanSms.toLowerCase().contains('upi')) {
-      accountType = 'UPI';
-    } else if (cleanSms.toLowerCase().contains('credit card') || cleanSms.toLowerCase().contains('card')) {
-      accountType = 'Credit Card';
+    // Template 4: Canara Bank Credited
+    // "An amount of INR 2,500.00 has been CREDITED to your account XXXX5269 on 20/06/2026.Total Avail.bal INR 4,293.88.- Canara Bank"
+    final canaraCreditedPattern = RegExp(
+      r'An\s+amount\s+of\s+INR\s*([\d,]+(?:\.\d{1,2})?)\s+has\s+been\s+CREDITED\s+to\s+your\s+account\s+[\w\d]+\s+on\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}',
+      caseSensitive: false,
+    );
+    final matchCanaraCredited = canaraCreditedPattern.firstMatch(cleanSms);
+    if (matchCanaraCredited != null && cleanSms.toLowerCase().contains('canara')) {
+      final amtStr = matchCanaraCredited.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      return _buildResult(
+        amount: amt,
+        merchant: 'Canara Bank Credit',
+        category: 'General',
+        type: 'credit',
+        accountType: 'Bank Account',
+      );
     }
 
-    // ── 4. Merchant / Party Name Extraction ────────────────────────────────
-    String merchant = _extractNativeMerchant(cleanSms);
-    String category = _inferCategory(merchant, cleanSms);
-
-    // AI Fallback Logic: If native parsing failed to get a clean merchant name
-    if ((merchant == 'Unknown' || merchant.isEmpty) && deepSeekService != null) {
-      final sanitizedSms = _sanitizeSmsForPrivacy(cleanSms);
-      final aiResult = await deepSeekService!.parseSmsFallback(sanitizedSms);
-      if (aiResult != null) {
-        merchant = aiResult['merchant_name'] ?? merchant;
-        category = aiResult['category'] ?? category;
-      }
+    // Template 5: Canara Bank UPI Credit
+    // "Dear Customer, Acct XXXX5269 credited with INR 244.00 on 04/08/26 from SHIVPAL  SIN; UPI:621632401455; Bal INR 4,975.19-CanaraBank"
+    final canaraUpiCreditedPattern = RegExp(
+      r'Dear\s+Customer,\s+Acct\s+[\w\d]+\s+credited\s+with\s+INR\s*([\d,]+(?:\.\d{1,2})?)\s+on\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}\s+from\s+(.+?)(?:;|\s+UPI:)',
+      caseSensitive: false,
+    );
+    final matchCanaraUpiCredited = canaraUpiCreditedPattern.firstMatch(cleanSms);
+    if (matchCanaraUpiCredited != null && cleanSms.toLowerCase().contains('canarabank')) {
+      final amtStr = matchCanaraUpiCredited.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      final merchant = matchCanaraUpiCredited.group(2)!.trim();
+      return _buildResult(
+        amount: amt,
+        merchant: merchant,
+        category: _inferCategory(merchant, cleanSms),
+        type: 'credit',
+        accountType: 'UPI',
+      );
     }
 
+    // Does not match any specified bank template
+    return _unparsed();
+  }
+
+  SmsParserResult _unparsed() {
+    return SmsParserResult(
+      amount: 0.0,
+      merchant: 'Unknown',
+      category: 'Non-financial',
+      type: 'none',
+      accountType: 'Unknown',
+      isParsedSuccessfully: false,
+    );
+  }
+
+  SmsParserResult _buildResult({
+    required double amount,
+    required String merchant,
+    required String category,
+    required String type,
+    required String accountType,
+  }) {
     return SmsParserResult(
       amount: amount,
-      merchant: merchant.isEmpty ? 'Unknown Merchant' : merchant,
+      merchant: merchant.isEmpty ? 'Bank Transaction' : merchant,
       category: category,
       type: type,
       accountType: accountType,
@@ -153,56 +188,9 @@ class SmsParserService {
     );
   }
 
-  /// Sanitizes SMS by redacting sensitive data (account numbers, balances) for privacy
-  String _sanitizeSmsForPrivacy(String sms) {
-    String clean = sms;
-    clean = clean.replaceAll(RegExp(r'(?:A/C|Acct|Account|Card)\s*(?:no\.?|num\.?)?\s*[:\s]*[X*\d]{4,}', caseSensitive: false), 'A/C XXXX');
-    clean = clean.replaceAll(RegExp(r'(?:avail|total)?\s*(?:bal|balance)\s*[:\s]*[\w.]+\s*[\d,]+(?:\.\d{2})?', caseSensitive: false), 'Bal: REDACTED');
-    return clean;
-  }
-
-  String _extractNativeMerchant(String sms) {
-    // Specific regex for IPPB / Indian Bank formats:
-    // Format 1: "received a payment of Rs. 70.00 ... from mr mobashir umar ans thru IPPB"
-    final creditFromMatch = RegExp(r'from\s+([A-Za-z0-9\s._-]+?)(?=\s+(?:thru|via|on|ref|info|a/c|\d)|$)', caseSensitive: false).firstMatch(sms);
-    if (creditFromMatch != null && creditFromMatch.group(1) != null) {
-      final m = creditFromMatch.group(1)!.trim();
-      if (m.isNotEmpty && !m.toLowerCase().startsWith('ref') && !m.toLowerCase().startsWith('rs')) {
-        return m;
-      }
-    }
-
-    // Format 2: "Debit Rs.50.00 for UPI to aman kumar jai on..."
-    final debitToMatch = RegExp(r'(?:for\s+UPI\s+)?to\s+([A-Za-z0-9\s._-]+?)(?=\s+(?:on|ref|via|val|bal|a/c|If\s+not|\d)|$)', caseSensitive: false).firstMatch(sms);
-    if (debitToMatch != null && debitToMatch.group(1) != null) {
-      final m = debitToMatch.group(1)!.trim();
-      if (m.isNotEmpty && !m.toLowerCase().startsWith('ref') && !m.toLowerCase().startsWith('rs')) {
-        return m;
-      }
-    }
-
-    // Fallback standard patterns
-    final patterns = [
-      RegExp(r'(?:to|at|info:?|vpa:?)\s+([A-Za-z0-9\s._-]+?)(?=\s+(?:on|ref|via|val|bal|a/c|\d)|$)', caseSensitive: false),
-      RegExp(r'transfer\s+to\s+([A-Za-z0-9\s._-]+)', caseSensitive: false),
-      RegExp(r'spent\s+on\s+([A-Za-z0-9\s._-]+)', caseSensitive: false),
-    ];
-
-    for (final pattern in patterns) {
-      final match = pattern.firstMatch(sms);
-      if (match != null && match.group(1) != null) {
-        final found = match.group(1)!.trim();
-        if (found.length > 2 && !found.toLowerCase().startsWith('ref') && !found.toLowerCase().startsWith('rs')) {
-          return found;
-        }
-      }
-    }
-    return 'Unknown';
-  }
-
   String _inferCategory(String merchant, String sms) {
     final lower = (merchant + " " + sms).toLowerCase();
-    if (lower.contains('swiggy') || lower.contains('zomato') || lower.contains('food') || lower.contains('restaurant')) {
+    if (lower.contains('swiggy') || lower.contains('zomato') || lower.contains('food') || lower.contains('restaurant') || lower.contains('chai')) {
       return 'Food & Dining';
     } else if (lower.contains('uber') || lower.contains('ola') || lower.contains('irctc') || lower.contains('metro') || lower.contains('fuel') || lower.contains('petrol')) {
       return 'Transport';

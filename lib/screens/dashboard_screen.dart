@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +14,8 @@ import '../services/update_checker_service.dart';
 import 'analytics_screen.dart';
 import 'admin_profile_screen.dart';
 import 'edit_transaction_screen.dart';
+import 'budget_screen.dart';
+import 'debt_khatabook_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -27,7 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final TextEditingController _recipientController = TextEditingController();
   final TextEditingController _customCategoryController = TextEditingController();
 
-  String _selectedCategory = "Food";
+  String _selectedCategory = "Food & Dining";
   String _selectedType = "debit";
   String _selectedAccountType = "UPI";
   DateTime _selectedDate = DateTime.now();
@@ -35,6 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Filter state: 'all' | 'debit' | 'credit'
   String _activeFilter = 'all';
+  DateTime? _filterDate;
 
   // Banner month selector — defaults to current month
   DateTime _bannerMonth = DateTime(DateTime.now().year, DateTime.now().month);
@@ -43,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _bannerLoading  = false;
 
   final List<String> _categories = [
-    "Food",
+    "Food & Dining",
     "Shopping",
     "Bills",
     "Transport",
@@ -268,12 +276,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   /// Deletes a transaction and shows an UNDO snackbar for 5 seconds.
-  void _deleteWithUndo(TransactionModel tx) {
+  Future<void> _deleteWithUndo(TransactionModel tx) async {
     if (tx.id == null) return;
     final provider = context.read<TransactionProvider>();
-    provider.deleteTransaction(tx.id!);
-    _loadBannerSummary();
+    await provider.deleteTransaction(tx.id!);
+    await _loadBannerSummary();
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -297,9 +306,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         action: SnackBarAction(
           label: "UNDO",
           textColor: const Color(0xFFA29BFE),
-          onPressed: () {
-            provider.restoreTransaction(tx);
-            _loadBannerSummary();
+          onPressed: () async {
+            await provider.restoreTransaction(tx);
+            await _loadBannerSummary();
           },
         ),
       ),
@@ -374,19 +383,249 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
-            onPressed: () {
-              context.read<TransactionProvider>().clearAllTransactions();
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("All expenses cleared"),
-                  backgroundColor: Color(0xFFFF7675),
-                ),
-              );
+            onPressed: () async {
+              await context.read<TransactionProvider>().clearAllTransactions();
+              await _loadBannerSummary();
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("All expenses cleared"),
+                    backgroundColor: Color(0xFFFF7675),
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7675)),
             child: const Text("Clear All", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportBackup() async {
+    try {
+      final jsonStr = await DatabaseHelper.instance.exportBackupJson();
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final controller = TextEditingController(text: jsonStr);
+
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              "Export Backup JSON",
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Choose how you want to save your backup:",
+                  style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  maxLines: 4,
+                  readOnly: true,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 11, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF2B2B3D) : const Color(0xFFF0F1F5),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text("Close", style: TextStyle(color: isDark ? Colors.white54 : Colors.black54)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: jsonStr));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("✅ Backup copied to clipboard!"),
+                      backgroundColor: Color(0xFF00B894),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0984E3)),
+                icon: const Icon(Icons.copy_rounded, color: Colors.white, size: 16),
+                label: const Text("Copy Text", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _trySaveBackupFile(jsonStr);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C5CE7)),
+                icon: const Icon(Icons.download_rounded, color: Colors.white, size: 16),
+                label: const Text("Save File", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to generate backup: $e")),
+        );
+      }
+    }
+  }
+
+  Future<void> _trySaveBackupFile(String jsonStr) async {
+    try {
+      final now = DateTime.now();
+      final dateStr = DateFormat('yyyyMMdd_HHmmss').format(now);
+      final fileName = 'cipher_backup_$dateStr.json';
+
+      final String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save Backup File',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        bytes: utf8.encode(jsonStr),
+      );
+
+      if (outputFile != null) {
+        final file = File(outputFile);
+        try {
+          await file.writeAsString(jsonStr);
+        } catch (_) {
+          // On Android SAF URI returned by FilePicker, bytes parameter already wrote the file
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Backup saved successfully!"),
+              backgroundColor: Color(0xFF00B894),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("FilePicker save failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Could not save file directly. Please use 'Copy Text' option."),
+            backgroundColor: Color(0xFFFF7675),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreBackup() async {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Restore Backup JSON", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['json', 'txt'],
+                  );
+                  if (result != null && result.files.single.path != null) {
+                    final file = File(result.files.single.path!);
+                    final content = await file.readAsString();
+                    controller.text = content;
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error selecting file: $e")),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C5CE7),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.folder_open_rounded, color: Colors.white, size: 18),
+              label: const Text("Pick Backup File (.json)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              "Or paste your exported JSON backup text below:",
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              maxLines: 5,
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                hintText: 'Paste backup JSON here...',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: const Color(0xFF2B2B3D),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final jsonStr = controller.text.trim();
+              if (jsonStr.isEmpty) return;
+              try {
+                final count = await DatabaseHelper.instance.restoreBackupJson(jsonStr);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  await context.read<TransactionProvider>().fetchTransactions();
+                  await _loadBannerSummary();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Successfully restored $count transactions!"),
+                      backgroundColor: const Color(0xFF00B894),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Invalid backup format: $e"),
+                      backgroundColor: const Color(0xFFFF7675),
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B894)),
+            icon: const Icon(Icons.file_download_done_rounded, color: Colors.white, size: 18),
+            label: const Text("Restore", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -884,9 +1123,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
              d.isBefore(monthEnd);
     }).toList();
 
+    final dateFilteredTx = _filterDate == null
+        ? allTx
+        : allTx.where((tx) {
+            final d = DateTime.tryParse(tx.date);
+            if (d == null) return false;
+            return d.year == _filterDate!.year &&
+                d.month == _filterDate!.month &&
+                d.day == _filterDate!.day;
+          }).toList();
+
     final filteredTx = _activeFilter == 'all'
-        ? monthTx
-        : monthTx.where((tx) => tx.type == _activeFilter).toList();
+        ? dateFilteredTx
+        : dateFilteredTx.where((tx) => tx.type == _activeFilter).toList();
 
     final groupedData = _groupTransactionsByDate(filteredTx);
 
@@ -930,82 +1179,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : Colors.black87),
             color: Theme.of(context).colorScheme.surface,
             onSelected: (val) async {
-              if (val == 'clear_all') {
+              if (val == 'scan_inbox') {
+                if (!provider.smsScanEnabled) {
+                  await provider.setSmsScanning(true);
+                }
+                await _scanSmsInbox();
+              } else if (val == 'clear_all') {
                 _confirmClearAllTransactions();
               } else if (val == 'refresh') {
                 provider.fetchTransactions();
                 await _loadBannerSummary();
-              } else if (val == 'analytics') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsScreen()));
-              } else if (val == 'toggle_sms') {
-                final willEnable = !provider.smsScanEnabled;
-                if (!willEnable) {
-                  // Confirm before deleting all SMS data
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: const Color(0xFF1E1E2E),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: const Text("Disable SMS Scan?",
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      content: const Text(
-                        "This will delete all transactions imported from SMS. Manually added expenses will be kept.",
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-                            await provider.setSmsScanning(false);
-                            await _loadBannerSummary();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                content: Text("SMS scan disabled — imported data cleared"),
-                                backgroundColor: Color(0xFFFF7675),
-                                duration: Duration(seconds: 3),
-                              ));
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7675)),
-                          child: const Text("Disable & Clear",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  );
-                } else {
-                  await provider.setSmsScanning(true);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("SMS scan enabled — will import on next open"),
-                      backgroundColor: Color(0xFF00B894),
-                      duration: Duration(seconds: 2),
-                    ));
-                  }
-                }
+              } else if (val == 'admin') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminProfileScreen()));
+              } else if (val == 'export_backup') {
+                _exportBackup();
+              } else if (val == 'restore_backup') {
+                _restoreBackup();
+              } else if (val == 'budget') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen()));
+              } else if (val == 'debt_khatabook') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtKhatabookScreen()));
               }
             },
             itemBuilder: (context) => [
               PopupMenuItem(
-                value: 'toggle_sms',
+                value: 'admin',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C5CE7).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF6C5CE7).withOpacity(0.4), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF6C5CE7), size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        "Admin Profile",
+                        style: TextStyle(
+                          color: isDark ? Colors.white : const Color(0xFF6C5CE7),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'scan_inbox',
                 child: Row(
                   children: [
-                    Icon(
-                      provider.smsScanEnabled ? Icons.sms_rounded : Icons.sms_failed_outlined,
-                      color: provider.smsScanEnabled ? const Color(0xFF00B894) : (isDark ? Colors.white38 : Colors.black45),
-                      size: 18,
-                    ),
+                    const Icon(Icons.document_scanner_rounded, color: Color(0xFF00CEC9), size: 18),
                     const SizedBox(width: 10),
-                    Text(
-                      provider.smsScanEnabled ? "SMS Scan: ON" : "SMS Scan: OFF",
-                      style: TextStyle(
-                        color: provider.smsScanEnabled ? const Color(0xFF00B894) : (isDark ? Colors.white70 : Colors.black87),
-                      ),
-                    ),
+                    Text("Scan SMS Inbox", style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export_backup',
+                child: Row(
+                  children: [
+                    const Icon(Icons.file_upload_rounded, color: Color(0xFF0984E3), size: 18),
+                    const SizedBox(width: 10),
+                    Text("Export Backup (JSON)", style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'restore_backup',
+                child: Row(
+                  children: [
+                    const Icon(Icons.file_download_rounded, color: Color(0xFF00B894), size: 18),
+                    const SizedBox(width: 10),
+                    Text("Restore Backup (JSON)", style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
                   ],
                 ),
               ),
@@ -1098,59 +1347,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             const SizedBox(width: 28), // Space for centered FAB
 
-            // 3. Enable/Disable SMS Scan
+            // 3. Monthly Budget Icon
             InkWell(
-              onTap: () async {
-                final willEnable = !provider.smsScanEnabled;
-                if (!willEnable) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: Theme.of(context).colorScheme.surface,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: Text("Disable SMS Scan?",
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
-                      content: Text(
-                        "This will delete all transactions imported from SMS. Manually added expenses will be kept.",
-                        style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontSize: 14),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: Text("Cancel", style: TextStyle(color: isDark ? Colors.white54 : Colors.black54)),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-                            await provider.setSmsScanning(false);
-                            await _loadBannerSummary();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                content: Text("SMS scan disabled — imported data cleared"),
-                                backgroundColor: Color(0xFFFF7675),
-                                duration: Duration(seconds: 3),
-                              ));
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7675)),
-                          child: const Text("Disable & Clear",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  );
-                } else {
-                  await provider.setSmsScanning(true);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("SMS scan enabled — Scanning inbox now..."),
-                      backgroundColor: Color(0xFF00B894),
-                      duration: Duration(seconds: 2),
-                    ));
-                  }
-                  await provider.scanSmsInbox(daysBack: 90);
-                  await _loadBannerSummary();
-                }
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen()));
               },
               borderRadius: BorderRadius.circular(12),
               child: Padding(
@@ -1158,28 +1358,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      provider.smsScanEnabled ? Icons.sms_rounded : Icons.sms_failed_outlined,
-                      color: provider.smsScanEnabled ? const Color(0xFF00B894) : (isDark ? Colors.white54 : Colors.black54),
-                      size: 20,
-                    ),
-                    Text(
-                      provider.smsScanEnabled ? "SMS: ON" : "SMS: OFF",
-                      style: TextStyle(
-                        color: provider.smsScanEnabled ? const Color(0xFF00B894) : (isDark ? Colors.white54 : Colors.black54),
-                        fontSize: 9,
-                        fontWeight: provider.smsScanEnabled ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
+                    Icon(Icons.pie_chart_rounded, color: isDark ? Colors.white70 : Colors.black54, size: 20),
+                    Text("Budget", style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontSize: 9)),
                   ],
                 ),
               ),
             ),
 
-            // 4. Contact Admin Icon (Replaces Refresh)
+            // 4. Khatabook / Debt Icon
             InkWell(
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminProfileScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtKhatabookScreen()));
               },
               borderRadius: BorderRadius.circular(12),
               child: Padding(
@@ -1187,8 +1376,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.admin_panel_settings_rounded, color: isDark ? Colors.white70 : Colors.black54, size: 20),
-                    Text("Admin", style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontSize: 9)),
+                    Icon(Icons.menu_book_rounded, color: isDark ? Colors.white70 : Colors.black54, size: 20),
+                    Text("Debt", style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontSize: 9)),
                   ],
                 ),
               ),
@@ -1216,7 +1405,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         decoration: BoxDecoration(
                           gradient: isDark
                               ? const LinearGradient(
-                                  colors: [Color(0xFF6C5CE7), Color(0xFF8E44AD)],
+                                  colors: [Color(0xFF1E1E2E), Color(0xFF2D2B55)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 )
@@ -1227,7 +1416,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                           borderRadius: BorderRadius.circular(24),
                           border: isDark
-                              ? null
+                              ? Border.all(
+                                  color: const Color(0xFF6C5CE7).withOpacity(0.35),
+                                  width: 1.5,
+                                )
                               : Border.all(
                                   color: const Color(0xFF6C5CE7).withOpacity(0.12),
                                   width: 1.5,
@@ -1235,7 +1427,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: isDark
-                                  ? const Color(0xFF6C5CE7).withOpacity(0.4)
+                                  ? const Color(0xFF6C5CE7).withOpacity(0.15)
                                   : const Color(0xFF6C5CE7).withOpacity(0.08),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
@@ -1364,29 +1556,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 20),
 
                     // ── Filter Chips ─────────────────────────────────────────
-                    Row(
-                      children: [
-                        _buildFilterChip(
-                          label: "All",
-                          icon: Icons.list_rounded,
-                          value: 'all',
-                          activeColor: const Color(0xFF6C5CE7),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildFilterChip(
-                          label: "Debits",
-                          icon: Icons.arrow_upward_rounded,
-                          value: 'debit',
-                          activeColor: const Color(0xFFFF7675),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildFilterChip(
-                          label: "Credits",
-                          icon: Icons.arrow_downward_rounded,
-                          value: 'credit',
-                          activeColor: const Color(0xFF00B894),
-                        ),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            label: "All",
+                            icon: Icons.list_rounded,
+                            value: 'all',
+                            activeColor: const Color(0xFF6C5CE7),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildFilterChip(
+                            label: "Debits",
+                            icon: Icons.arrow_upward_rounded,
+                            value: 'debit',
+                            activeColor: const Color(0xFFFF7675),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildFilterChip(
+                            label: "Credits",
+                            icon: Icons.arrow_downward_rounded,
+                            value: 'credit',
+                            activeColor: const Color(0xFF00B894),
+                          ),
+                          const SizedBox(width: 8),
+                          // Prominent Date Filter Chip
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _filterDate ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now().add(const Duration(days: 365)),
+                              );
+                              if (picked != null) {
+                                setState(() => _filterDate = picked);
+                              }
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _filterDate != null
+                                    ? const Color(0xFF00CEC9)
+                                    : (isDark ? const Color(0xFF1E1E2E) : Colors.white),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: _filterDate != null
+                                      ? const Color(0xFF00CEC9)
+                                      : (isDark ? Colors.white12 : Colors.black.withOpacity(0.1)),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 16,
+                                    color: _filterDate != null ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _filterDate != null
+                                        ? DateFormat('dd MMM yyyy').format(_filterDate!)
+                                        : "Select Date",
+                                    style: TextStyle(
+                                      color: _filterDate != null ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (_filterDate != null) ...[
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      onTap: () => setState(() => _filterDate = null),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.18),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                                      ),
+                                    ),
+                                  ]
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 20),

@@ -103,7 +103,7 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
                   icon: Icons.gavel_rounded,
                   title: "Limitation of Liability",
                   description:
-                      "Mera Khata is provided 'as-is' for personal expense tracking. We are liable for nothing regarding financial decisions or parsing inaccuracies.",
+                      "Cipher is provided 'as-is' for personal expense tracking. We are liable for nothing regarding financial decisions or parsing inaccuracies.",
                 ),
               ],
             ),
@@ -280,7 +280,7 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
               ),
               const SizedBox(height: 8),
               Text(
-                "To automatically track expenses, incoming credits, and show the background popup overlay, Mera Khata uses SMS and Push Notification tracking:",
+                "To automatically track expenses, incoming credits, and show the background popup overlay, Cipher uses SMS and Push Notification tracking:",
                 style: TextStyle(color: subtextColor, fontSize: 14, height: 1.5),
               ),
 

@@ -28,7 +28,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   bool _isSaving = false;
 
   static const List<String> _categories = [
-    "Food", "Shopping", "Bills", "Transport",
+    "Food & Dining", "Shopping", "Bills", "Transport",
     "Entertainment", "Grocery", "General", "Other",
   ];
 
