@@ -1555,105 +1555,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ── Filter Chips ─────────────────────────────────────────
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        children: [
-                          _buildFilterChip(
-                            label: "All",
-                            icon: Icons.list_rounded,
-                            value: 'all',
-                            activeColor: const Color(0xFF6C5CE7),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(
-                            label: "Debits",
-                            icon: Icons.arrow_upward_rounded,
-                            value: 'debit',
-                            activeColor: const Color(0xFFFF7675),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(
-                            label: "Credits",
-                            icon: Icons.arrow_downward_rounded,
-                            value: 'credit',
-                            activeColor: const Color(0xFF00B894),
-                          ),
-                          const SizedBox(width: 8),
-                          // Prominent Date Filter Chip
-                          GestureDetector(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: _filterDate ?? DateTime.now(),
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime.now().add(const Duration(days: 365)),
-                              );
-                              if (picked != null) {
-                                setState(() => _filterDate = picked);
-                              }
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _filterDate != null
-                                    ? const Color(0xFF00CEC9)
-                                    : (isDark ? const Color(0xFF1E1E2E) : Colors.white),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: _filterDate != null
-                                      ? const Color(0xFF00CEC9)
-                                      : (isDark ? Colors.white12 : Colors.black.withOpacity(0.1)),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today_rounded,
-                                    size: 16,
-                                    color: _filterDate != null ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _filterDate != null
-                                        ? DateFormat('dd MMM yyyy').format(_filterDate!)
-                                        : "Select Date",
-                                    style: TextStyle(
-                                      color: _filterDate != null ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (_filterDate != null) ...[
-                                    const SizedBox(width: 8),
-                                    InkWell(
-                                      onTap: () => setState(() => _filterDate = null),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.18),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
-                                      ),
-                                    ),
-                                  ]
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
                     // ── Section Header ────────────────────────────────────
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1679,6 +1580,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
 
                     const SizedBox(height: 12),
+
+                    // ── Filter Chips Row ──────────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildFilterChip(
+                            label: "All",
+                            icon: Icons.list_rounded,
+                            value: 'all',
+                            activeColor: const Color(0xFF6C5CE7),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: _buildFilterChip(
+                            label: "Debits",
+                            icon: Icons.arrow_upward_rounded,
+                            value: 'debit',
+                            activeColor: const Color(0xFFFF7675),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: _buildFilterChip(
+                            label: "Credits",
+                            icon: Icons.arrow_downward_rounded,
+                            value: 'credit',
+                            activeColor: const Color(0xFF00B894),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        // Compact Date Filter Chip with Easy Touch Clear Target
+                        Expanded(
+                          flex: _filterDate != null ? 1 : 1,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _filterDate ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now().add(const Duration(days: 365)),
+                              );
+                              if (picked != null) {
+                                setState(() => _filterDate = picked);
+                              }
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _filterDate != null
+                                    ? const Color(0xFF00CEC9)
+                                    : (isDark ? const Color(0xFF1E1E2E) : Colors.white),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _filterDate != null
+                                      ? const Color(0xFF00CEC9)
+                                      : (isDark ? Colors.white12 : Colors.black.withOpacity(0.1)),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 13,
+                                    color: _filterDate != null ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        _filterDate != null
+                                            ? DateFormat('dd MMM').format(_filterDate!)
+                                            : "Date",
+                                        style: TextStyle(
+                                          color: _filterDate != null ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if (_filterDate != null) ...[
+                                    const SizedBox(width: 2),
+                                    InkWell(
+                                      onTap: () => setState(() => _filterDate = null),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close_rounded, size: 12, color: Colors.white),
+                                      ),
+                                    ),
+                                  ]
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
 
                     // ── Transaction List ──────────────────────────────────
                     filteredTx.isEmpty
