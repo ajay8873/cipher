@@ -12,7 +12,7 @@
     <img src="https://img.shields.io/badge/PARSER-HYBRID%20REGEX%20%2B%20NLP-FF6B6B?style=for-the-badge" alt="Parser" />
   </p>
   <p>
-    <img src="https://img.shields.io/badge/NETWORK-0%25%20INTERNET%20REQUIRED-00C853?style=for-the-badge&logo=adguard&logoColor=white" alt="Network" />
+    <img src="https://img.shields.io/badge/NETWORK-APP%20UPDATES%20ONLY%20%7C%20NO%20DATA%20SYNC-00C853?style=for-the-badge&logo=github&logoColor=white" alt="Network" />
     <img src="https://img.shields.io/badge/PLATFORM-ANDROID-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform" />
     <img src="https://img.shields.io/badge/FRAMEWORK-FLUTTER-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Framework" />
   </p>
@@ -23,7 +23,10 @@
 
 ## 🌟 Overview
 
-**Cipher** (Khata) is built from the ground up on **zero-trust, privacy-first, and self-custody principles**. Unlike cloud-based expense managers that upload your confidential financial messages and bank statements to remote servers, Cipher operates **100% locally on your physical device** without requiring cloud registration or unnecessary background sync.
+**Cipher** (Khata) is built from the ground up on **zero-trust, privacy-first, and self-custody principles**. Unlike cloud-based expense managers that upload your confidential financial messages and bank statements to remote servers, Cipher operates **100% locally on your physical device**.
+
+> [!NOTE]
+> **Network Transparency**: Cipher only uses internet connectivity to query the GitHub Releases API for **in-app updates**. Your financial data, bank SMS messages, and transaction records are **never uploaded, synced, or transmitted anywhere**.
 
 Using high-precision regex parsing engines and a native background listener service, Cipher automatically detects debit SMS alerts, incoming UPI credits (PhonePe, GPay, Paytm, Navi, CRED), and presents an instant floating overlay to categorize your spending in seconds.
 
@@ -63,9 +66,10 @@ Using high-precision regex parsing engines and a native background listener serv
 - Checks the GitHub Releases API on app startup for new releases.
 - Offers in-app update prompts with full changelogs and one-tap APK installation.
 
-### 7. 🛡️ 100% On-Device Privacy
+### 7. 🛡️ 100% On-Device Privacy & Zero Data Upload
 - All parsed SMS messages, notification payloads, and logs are stored strictly inside your local SQLite database (`khata_expenses.db`).
-- Zero telemetry, zero external trackers, and zero third-party ads.
+- **Zero data upload/sync**: Cipher never uploads your financial transactions or logs to any server.
+- Zero telemetry, zero analytics trackers, and zero third-party ads.
 
 ---
 
