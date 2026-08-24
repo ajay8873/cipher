@@ -42,6 +42,8 @@ class DebtModel {
   final String note;
   final String date;
   final bool isSettled;
+  final String? phoneNumber;
+  final String? upiId;
 
   DebtModel({
     this.id,
@@ -51,6 +53,8 @@ class DebtModel {
     required this.note,
     required this.date,
     this.isSettled = false,
+    this.phoneNumber,
+    this.upiId,
   });
 
   Map<String, dynamic> toMap() {
@@ -62,6 +66,8 @@ class DebtModel {
       'note': note,
       'date': date,
       'is_settled': isSettled ? 1 : 0,
+      'phone_number': phoneNumber,
+      'upi_id': upiId,
     };
   }
 
@@ -74,6 +80,8 @@ class DebtModel {
       note: map['note'] as String? ?? '',
       date: map['date'] as String,
       isSettled: (map['is_settled'] as int? ?? 0) == 1,
+      phoneNumber: map['phone_number'] as String?,
+      upiId: map['upi_id'] as String?,
     );
   }
 }

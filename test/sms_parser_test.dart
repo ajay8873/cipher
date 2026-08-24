@@ -66,6 +66,33 @@ void main() {
       expect(res.merchant, equals('pankaj prakash'));
     });
 
+    test('PNB Debited SMS Format', () async {
+      const sms = '𝐀/𝐜 X5425 𝐝𝐞𝐛𝐢𝐭𝐞𝐝 𝐈𝐍𝐑 100.00 𝐃𝐭 10-08-26 17:25:25 𝐭𝐨 SONU PROFESSION 𝐭𝐡𝐫𝐮 𝐔𝐏𝐈:648945487357..𝐁𝐚𝐥 𝐈𝐍𝐑 3816.58 𝐍𝐨𝐭 𝐮?𝐅𝐰𝐝 𝐭𝐡𝐢𝐬 𝐒𝐌𝐒 𝐭𝐨 𝟗𝟐𝟔𝟴𝟎𝟗𝟐𝟔𝟴𝟎 𝐭𝐨 𝐛𝐥𝐨𝐜𝐤 𝐔𝐏𝐈.-𝐏𝐍𝐁';
+      final res = await parser.parseSms(sms);
+      expect(res.isParsedSuccessfully, isTrue);
+      expect(res.type, equals('debit'));
+      expect(res.amount, equals(100.00));
+      expect(res.merchant, equals('SONU PROFESSION'));
+    });
+
+    test('PNB Credited SMS Format', () async {
+      const sms = '𝐀/𝐜 X5425 𝐜𝐫𝐞𝐝𝐢𝐭𝐞𝐝 𝐟𝐨𝐫 𝐈𝐍𝐑 500.00 𝐨𝐧 07-08-26 14:35:29 𝐛𝐲 DEEKSHA TOMAR D 𝐭𝐡𝐫𝐮 𝐔𝐏𝐈.𝐀𝐯𝐥𝐁𝐚𝐥 𝐈𝐍𝐑 3255.58(𝐔𝐏𝐈:127519520469).-𝐏𝐍𝐁';
+      final res = await parser.parseSms(sms);
+      expect(res.isParsedSuccessfully, isTrue);
+      expect(res.type, equals('credit'));
+      expect(res.amount, equals(500.00));
+      expect(res.merchant, equals('DEEKSHA TOMAR D'));
+    });
+
+    test('PNB Credited SMS Format 2 (Passbook / Cash deposit)', () async {
+      const sms = '𝖠𝖼 XX5425 𝖢𝗋𝖾𝖽𝗂𝗍𝖾𝖽 𝗐𝗂𝗍𝗁 Rs.1150.00,07-08-2026 15:13:02.𝖠𝗏𝗅 𝖡𝖺𝗅 Rs.4405.58CR.𝖧𝖾𝗅𝗉𝗅𝗂𝗇𝖾 𝟣𝟪𝟢𝟢𝟣𝟪𝟢𝟢/𝟣𝟪𝟢𝟢𝟤𝟢𝟤𝟣.𝖢𝗁𝖾𝖼𝗄 𝖢𝖺𝗌𝗁 𝖽𝖾𝗉𝗈𝗌𝗂𝗍 𝖾𝗇𝗍𝗋𝗒 𝗂𝗇 𝖯𝖺𝗌𝗌𝖻𝗈𝗈𝗄/𝖯𝖭𝖡𝖮𝗇𝖾-𝖯𝖭𝖡.';
+      final res = await parser.parseSms(sms);
+      expect(res.isParsedSuccessfully, isTrue);
+      expect(res.type, equals('credit'));
+      expect(res.amount, equals(1150.00));
+      expect(res.merchant, equals('Cash Deposit'));
+    });
+
     test('Non-matching SMS template should be rejected strictly', () async {
       const sms = 'Your bank account has been debited with Rs. 100 for purchase at Store';
       final res = await parser.parseSms(sms);

@@ -30,7 +30,7 @@ class SmsParserService {
 
   /// Primary strict SMS parser matching ONLY defined bank templates
   Future<SmsParserResult> parseSms(String smsBody) async {
-    final cleanSms = smsBody.trim();
+    final cleanSms = _normalizeUnicode(smsBody.trim());
 
     // ── 0. Anti-spam / Fraud / Exclusion Filter ────────────────────────────
     final containsShortenedOrWebLink = RegExp(
@@ -156,6 +156,69 @@ class SmsParserService {
       );
     }
 
+    // Template 6: PNB Debited
+    // "A/c X5425 debited INR 100.00 Dt 10-08-26 17:25:25 to SONU PROFESSION thru UPI:648945487357..Bal INR 3816.58 Not u?Fwd this SMS to 9264092640 to block UPI.-PNB"
+    final pnbDebitedPattern = RegExp(
+      r'A/c\s+[\w\d]+\s+debited\s+INR\s*([\d,]+(?:\.\d{1,2})?)\s+Dt\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}(?:\s+\d{2}:\d{2}:\d{2})?\s+to\s+(.+?)\s+thru\s+UPI',
+      caseSensitive: false,
+    );
+    final matchPnbDebited = pnbDebitedPattern.firstMatch(cleanSms);
+    if (matchPnbDebited != null && cleanSms.toUpperCase().contains('PNB')) {
+      final amtStr = matchPnbDebited.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      final merchant = matchPnbDebited.group(2)!.trim();
+      return _buildResult(
+        amount: amt,
+        merchant: merchant,
+        category: _inferCategory(merchant, cleanSms),
+        type: 'debit',
+        accountType: 'UPI',
+      );
+    }
+
+    // Template 7: PNB Credited (Format A)
+    // "A/c X5425 credited for INR 500.00 on 07-08-26 14:35:29 by DEEKSHA TOMAR D thru UPI.AvlBal INR 3255.58(UPI:127519520469).-PNB"
+    final pnbCreditedPattern = RegExp(
+      r'A/c\s+[\w\d]+\s+credited\s+(?:for\s+)?INR\s*([\d,]+(?:\.\d{1,2})?)\s+on\s+\d{2}[-/\.]\d{2}[-/\.]\d{2,4}(?:\s+\d{2}:\d{2}:\d{2})?\s+by\s+(.+?)\s+thru\s+UPI',
+      caseSensitive: false,
+    );
+    final matchPnbCredited = pnbCreditedPattern.firstMatch(cleanSms);
+    if (matchPnbCredited != null && cleanSms.toUpperCase().contains('PNB')) {
+      final amtStr = matchPnbCredited.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      final merchant = matchPnbCredited.group(2)!.trim();
+      return _buildResult(
+        amount: amt,
+        merchant: merchant,
+        category: _inferCategory(merchant, cleanSms),
+        type: 'credit',
+        accountType: 'UPI',
+      );
+    }
+
+    // Template 8: PNB Credited (Format B - Passbook / Cash Deposit)
+    // "Ac XX5425 Credited with Rs.1150.00,07-08-2026 15:13:02.Avl Bal Rs.4405.58CR.Helpline 18001800/18002021.Check Cash deposit entry in Passbook/PNBOne-PNB."
+    final pnbCreditedPattern2 = RegExp(
+      r'Ac\s+[\w\d]+\s+Credited\s+with\s+Rs\.?\s*([\d,]+(?:\.\d{1,2})?)',
+      caseSensitive: false,
+    );
+    final matchPnbCredited2 = pnbCreditedPattern2.firstMatch(cleanSms);
+    if (matchPnbCredited2 != null && cleanSms.toUpperCase().contains('PNB')) {
+      final amtStr = matchPnbCredited2.group(1)!.replaceAll(',', '');
+      final amt = double.tryParse(amtStr) ?? 0.0;
+      String merchant = 'Cash Deposit / PNB';
+      if (cleanSms.toLowerCase().contains('cash deposit')) {
+        merchant = 'Cash Deposit';
+      }
+      return _buildResult(
+        amount: amt,
+        merchant: merchant,
+        category: _inferCategory(merchant, cleanSms),
+        type: 'credit',
+        accountType: 'Bank Account',
+      );
+    }
+
     // Does not match any specified bank template
     return _unparsed();
   }
@@ -200,5 +263,51 @@ class SmsParserService {
       return 'Bills & Utilities';
     }
     return 'General';
+  }
+
+  String _normalizeUnicode(String input) {
+    final buffer = StringBuffer();
+    for (final char in input.runes) {
+      // Mathematical Bold Capital Letters (U+1D400 .. U+1D419 -> A-Z)
+      if (char >= 0x1D400 && char <= 0x1D419) {
+        buffer.writeCharCode(65 + (char - 0x1D400));
+      }
+      // Mathematical Bold Small Letters (U+1D41A .. U+1D433 -> a-z)
+      else if (char >= 0x1D41A && char <= 0x1D433) {
+        buffer.writeCharCode(97 + (char - 0x1D41A));
+      }
+      // Mathematical Bold Digits (U+1D7CE .. U+1D7D7 -> 0-9)
+      else if (char >= 0x1D7CE && char <= 0x1D7D7) {
+        buffer.writeCharCode(48 + (char - 0x1D7CE));
+      }
+      // Mathematical Sans-Serif Bold Capital Letters
+      else if (char >= 0x1D5D4 && char <= 0x1D5ED) {
+        buffer.writeCharCode(65 + (char - 0x1D5D4));
+      }
+      // Mathematical Sans-Serif Bold Small Letters
+      else if (char >= 0x1D5EE && char <= 0x1D607) {
+        buffer.writeCharCode(97 + (char - 0x1D5EE));
+      }
+      // Mathematical Sans-Serif Bold Digits
+      else if (char >= 0x1D7EC && char <= 0x1D7F5) {
+        buffer.writeCharCode(48 + (char - 0x1D7EC));
+      }
+      // Mathematical Sans-Serif Regular Capital Letters (U+1D5A0 .. U+1D5B9)
+      else if (char >= 0x1D5A0 && char <= 0x1D5B9) {
+        buffer.writeCharCode(65 + (char - 0x1D5A0));
+      }
+      // Mathematical Sans-Serif Regular Small Letters (U+1D5BA .. U+1D5D3)
+      else if (char >= 0x1D5BA && char <= 0x1D5D3) {
+        buffer.writeCharCode(97 + (char - 0x1D5BA));
+      }
+      // Mathematical Sans-Serif Regular Digits (U+1D7E2 .. U+1D7EB)
+      else if (char >= 0x1D7E2 && char <= 0x1D7EB) {
+        buffer.writeCharCode(48 + (char - 0x1D7E2));
+      }
+      else {
+        buffer.writeCharCode(char);
+      }
+    }
+    return buffer.toString();
   }
 }

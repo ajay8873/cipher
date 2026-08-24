@@ -19,6 +19,8 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
   bool _isNotificationGranted = false;
   bool _isChecking = true;
 
+  bool _isContactsGranted = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,30 +82,37 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
                 const SizedBox(height: 14),
                 _buildPolicyPoint(
                   icon: Icons.phonelink_lock_rounded,
-                  title: "100% Local Storage & Privacy",
+                  title: "1. 100% On-Device Processing & Privacy",
                   description:
-                      "Your SMS messages and expense history NEVER leave your device. All processing & data storage happens strictly on your local device.",
+                      "Cipher is designed privacy-first. Your financial SMS messages, notifications, and transaction history are processed locally on your phone. We do NOT collect, sell, lease, or share your personal financial data with any third-party advertisers, data brokers, or external entities.",
                 ),
                 const SizedBox(height: 10),
                 _buildPolicyPoint(
                   icon: Icons.security_rounded,
-                  title: "How Data is Used",
+                  title: "2. Exclusive Data Usage for App Services",
                   description:
-                      "SMS & Push Notification data is processed exclusively to extract financial transactions. Promotional & personal messages are strictly ignored.",
+                      "SMS & Notification access is used solely to parse debit/credit financial alerts (e.g. Bank SMS, PhonePe, GPay, Paytm) to automatically build your personal expense ledger. Non-financial messages, OTPs, promotional SMS, and personal chats are completely filtered out and ignored.",
+                ),
+                const SizedBox(height: 10),
+                _buildPolicyPoint(
+                  icon: Icons.cloud_done_rounded,
+                  title: "3. Future Cloud Service & Automatic Consent",
+                  description:
+                      "By agreeing to these terms, you grant explicit consent that if Cipher integrates cloud sync or backup services (such as Supabase, Encrypted Cloud Storage, or accredited infrastructure providers) in future app updates, your encrypted transaction data may be synced securely to provide multi-device access and cloud backup functionality.",
                 ),
                 const SizedBox(height: 10),
                 _buildPolicyPoint(
                   icon: Icons.admin_panel_settings_rounded,
-                  title: "Right to Manage & Optimization",
+                  title: "4. Right to Optimize & Manage Platform",
                   description:
-                      "We preserve the full right to manage, update, and optimize app features, parsing algorithms, and performance for a better experience.",
+                      "We reserve full rights to maintain, improve, update, and optimize parsing rules, application features, algorithms, security standards, and user interfaces to provide seamless service reliability.",
                 ),
                 const SizedBox(height: 10),
                 _buildPolicyPoint(
                   icon: Icons.gavel_rounded,
-                  title: "Limitation of Liability",
+                  title: "5. Limitation of Liability",
                   description:
-                      "Cipher is provided 'as-is' for personal expense tracking. We are liable for nothing regarding financial decisions or parsing inaccuracies.",
+                      "Cipher is an automated expense ledger provided 'as-is' for informational purposes. Users remain solely responsible for verifying financial calculations, budgeting decisions, and tax reporting.",
                 ),
               ],
             ),
@@ -184,12 +193,14 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
     final smsStatus = await Permission.sms.status;
     final overlayStatus = await OverlayService.isPermissionGranted();
     final notificationStatus = await NotificationsListener.hasPermission ?? false;
+    final contactsStatus = await Permission.contacts.status;
 
     if (mounted) {
       setState(() {
         _isSmsGranted = smsStatus.isGranted;
         _isOverlayGranted = overlayStatus;
         _isNotificationGranted = notificationStatus;
+        _isContactsGranted = contactsStatus.isGranted;
         _isChecking = false;
       });
     }
@@ -207,6 +218,15 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
       });
     }
     _checkIfAllGranted();
+  }
+
+  Future<void> _requestContactsPermission() async {
+    final status = await Permission.contacts.request();
+    if (mounted) {
+      setState(() {
+        _isContactsGranted = status.isGranted;
+      });
+    }
   }
 
   Future<void> _requestOverlayPermission() async {
@@ -317,6 +337,18 @@ class _PermissionSetupScreenState extends State<PermissionSetupScreen> with Widg
                 icon: Icons.notifications_active_rounded,
                 isGranted: _isNotificationGranted,
                 onRequest: _requestNotificationPermission,
+                isDark: isDark,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Card 4: Contacts Access
+              _buildPermissionTile(
+                title: "4. Contacts Access",
+                subtitle: "Required to pick contacts for Khatabook debt SMS reminders & entry details.",
+                icon: Icons.contacts_rounded,
+                isGranted: _isContactsGranted,
+                onRequest: _requestContactsPermission,
                 isDark: isDark,
               ),
 

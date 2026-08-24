@@ -25,6 +25,10 @@ android/.gradle/
 **/android/gradlew
 **/android/gradlew.bat
 **/android/local.properties
+**/android/key.properties
+*.jks
+*.keystore
+key.properties
 
 # IDE & OS
 .idea/

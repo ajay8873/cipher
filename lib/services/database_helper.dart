@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -69,7 +69,9 @@ class DatabaseHelper {
         type TEXT NOT NULL,
         note TEXT,
         date TEXT NOT NULL,
-        is_settled INTEGER NOT NULL DEFAULT 0
+        is_settled INTEGER NOT NULL DEFAULT 0,
+        phone_number TEXT,
+        upi_id TEXT
       )
     ''');
   }
@@ -80,6 +82,14 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await _createBudgetAndDebtTables(db);
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE debts ADD COLUMN phone_number TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE debts ADD COLUMN upi_id TEXT');
+      } catch (_) {}
     }
   }
 
@@ -275,20 +285,43 @@ class DatabaseHelper {
     return result.isNotEmpty;
   }
 
-  /// Export all transactions as a JSON string for user backups
+  /// Export all transactions, budgets, and debts as a JSON string for user backups
   Future<String> exportBackupJson() async {
     final transactions = await getAllTransactions();
-    final jsonList = transactions.map((t) => t.toMap()).toList();
-    return jsonEncode(jsonList);
+    final budgets = await getAllBudgets();
+    final debts = await getAllDebts();
+
+    final backupData = {
+      'version': 2,
+      'transactions': transactions.map((t) => t.toMap()).toList(),
+      'budgets': budgets,
+      'debts': debts.map((d) => d.toMap()).toList(),
+    };
+
+    return jsonEncode(backupData);
   }
 
-  /// Import transactions from a JSON backup string with smart deduplication
+  /// Import transactions, budgets, and debts from a JSON backup string with smart deduplication
   Future<int> restoreBackupJson(String jsonStr) async {
-    final List<dynamic> decoded = jsonDecode(jsonStr);
+    final decoded = jsonDecode(jsonStr);
     final db = await instance.database;
     int importedCount = 0;
 
-    for (var item in decoded) {
+    List<dynamic> txList = [];
+    List<dynamic> budgetList = [];
+    List<dynamic> debtList = [];
+
+    if (decoded is List) {
+      // Legacy backup format (only transactions)
+      txList = decoded;
+    } else if (decoded is Map<String, dynamic>) {
+      txList = decoded['transactions'] as List<dynamic>? ?? [];
+      budgetList = decoded['budgets'] as List<dynamic>? ?? [];
+      debtList = decoded['debts'] as List<dynamic>? ?? [];
+    }
+
+    // Restore Transactions
+    for (var item in txList) {
       if (item is Map<String, dynamic>) {
         final Map<String, dynamic> cleanMap = Map<String, dynamic>.from(item);
         cleanMap.remove('id'); // Allow DB to generate new auto-increment ID
@@ -314,10 +347,54 @@ class DatabaseHelper {
         importedCount++;
       }
     }
+
+    // Restore Budgets
+    for (var item in budgetList) {
+      if (item is Map<String, dynamic>) {
+        final category = item['category'] as String?;
+        final amount = (item['allocated_amount'] as num?)?.toDouble();
+        final month = item['month'] as int?;
+        final year = item['year'] as int?;
+        if (category != null && amount != null && month != null && year != null) {
+          await setCategoryBudget(
+            category: category,
+            allocatedAmount: amount,
+            month: month,
+            year: year,
+          );
+        }
+      }
+    }
+
+    // Restore Debts
+    for (var item in debtList) {
+      if (item is Map<String, dynamic>) {
+        final Map<String, dynamic> cleanMap = Map<String, dynamic>.from(item);
+        cleanMap.remove('id');
+        final debt = DebtModel.fromMap(cleanMap);
+
+        final existing = await db.query(
+          'debts',
+          columns: ['id'],
+          where: 'person_name = ? AND ABS(amount - ?) < 0.01 AND type = ? AND date = ?',
+          whereArgs: [debt.personName, debt.amount, debt.type, debt.date],
+          limit: 1,
+        );
+        if (existing.isEmpty) {
+          await insertDebt(debt);
+        }
+      }
+    }
+
     return importedCount;
   }
 
   // ── Budget Operations ───────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getAllBudgets() async {
+    final db = await instance.database;
+    return await db.query('budgets');
+  }
+
   Future<void> setCategoryBudget({
     required String category,
     required double allocatedAmount,
@@ -369,6 +446,26 @@ class DatabaseHelper {
     await db.update(
       'debts',
       {'is_settled': isSettled ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateDebtDate(int id, String newDate) async {
+    final db = await instance.database;
+    await db.update(
+      'debts',
+      {'date': newDate},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateDebtPhoneNumber(int id, String phoneNumber) async {
+    final db = await instance.database;
+    await db.update(
+      'debts',
+      {'phone_number': phoneNumber},
       where: 'id = ?',
       whereArgs: [id],
     );

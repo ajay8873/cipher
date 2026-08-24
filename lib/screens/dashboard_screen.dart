@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/transaction_provider.dart';
 import '../models/transaction_model.dart';
 import '../services/database_helper.dart';
@@ -91,6 +92,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       print('Update check error: $e');
+    }
+  }
+
+  Future<void> _sendFeedbackEmail() async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'cont.cipher@gmail.com',
+      queryParameters: {
+        'subject': 'Feedback & Suggestions - Cipher App',
+      },
+    );
+    try {
+      final launched = await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await launchUrl(emailLaunchUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Could not open Gmail or Email client."),
+            backgroundColor: Color(0xFFFF7675),
+          ),
+        );
+      }
     }
   }
 
@@ -1148,7 +1174,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         title: Row(
           children: [
-            const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF6C5CE7)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/logo.png',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C5CE7),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "C",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
             Flexible(
               child: FittedBox(
@@ -1170,25 +1218,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: provider.isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode",
             onPressed: () => provider.toggleThemeMode(),
           ),
-          IconButton(
-            icon: Icon(Icons.sms_outlined, color: isDark ? Colors.white70 : Colors.black87),
-            tooltip: "Simulate SMS Test",
-            onPressed: _showSimulateSmsDialog,
-          ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : Colors.black87),
             color: Theme.of(context).colorScheme.surface,
             onSelected: (val) async {
-              if (val == 'scan_inbox') {
-                if (!provider.smsScanEnabled) {
-                  await provider.setSmsScanning(true);
+              if (val == 'toggle_sms') {
+                final newValue = !provider.smsScanEnabled;
+                await provider.setSmsScanning(newValue);
+                if (newValue) {
+                  await _scanSmsInbox();
                 }
-                await _scanSmsInbox();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      newValue
+                          ? "Automatic SMS Scanning enabled & inbox scanned!"
+                          : "SMS Scanning disabled.",
+                    ),
+                    backgroundColor: newValue ? const Color(0xFF00B894) : const Color(0xFFFF7675),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
               } else if (val == 'clear_all') {
                 _confirmClearAllTransactions();
               } else if (val == 'refresh') {
                 provider.fetchTransactions();
                 await _loadBannerSummary();
+              } else if (val == 'feedback') {
+                _sendFeedbackEmail();
               } else if (val == 'admin') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminProfileScreen()));
               } else if (val == 'export_backup') {
@@ -1199,6 +1256,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen()));
               } else if (val == 'debt_khatabook') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtKhatabookScreen()));
+              } else if (val == 'analytics') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsScreen()));
               }
             },
             itemBuilder: (context) => [
@@ -1229,12 +1288,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const PopupMenuDivider(),
               PopupMenuItem(
-                value: 'scan_inbox',
+                value: 'toggle_sms',
                 child: Row(
                   children: [
-                    const Icon(Icons.document_scanner_rounded, color: Color(0xFF00CEC9), size: 18),
+                    Icon(
+                      provider.smsScanEnabled
+                          ? Icons.mark_email_read_rounded
+                          : Icons.mark_email_unread_rounded,
+                      color: provider.smsScanEnabled
+                          ? const Color(0xFF00B894)
+                          : const Color(0xFFFF7675),
+                      size: 18,
+                    ),
                     const SizedBox(width: 10),
-                    Text("Scan SMS Inbox", style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                    Expanded(
+                      child: Text(
+                        provider.smsScanEnabled ? "SMS Scan: ON" : "SMS Scan: OFF",
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: provider.smsScanEnabled
+                            ? const Color(0xFF00B894).withOpacity(0.15)
+                            : const Color(0xFFFF7675).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        provider.smsScanEnabled ? "ON" : "OFF",
+                        style: TextStyle(
+                          color: provider.smsScanEnabled
+                              ? const Color(0xFF00B894)
+                              : const Color(0xFFFF7675),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'feedback',
+                child: Row(
+                  children: [
+                    const Icon(Icons.feedback_rounded, color: Color(0xFFE17055), size: 18),
+                    const SizedBox(width: 10),
+                    Text("Feedback & Suggestions", style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
                   ],
                 ),
               ),
@@ -1587,7 +1691,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: _buildFilterChip(
                             label: "All",
-                            icon: Icons.list_rounded,
                             value: 'all',
                             activeColor: const Color(0xFF6C5CE7),
                           ),
@@ -1596,7 +1699,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: _buildFilterChip(
                             label: "Debits",
-                            icon: Icons.arrow_upward_rounded,
                             value: 'debit',
                             activeColor: const Color(0xFFFF7675),
                           ),
@@ -1605,7 +1707,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: _buildFilterChip(
                             label: "Credits",
-                            icon: Icons.arrow_downward_rounded,
                             value: 'credit',
                             activeColor: const Color(0xFF00B894),
                           ),
@@ -1913,7 +2014,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// Animated filter chip — highlights when [value] matches [_activeFilter]
   Widget _buildFilterChip({
     required String label,
-    required IconData icon,
     required String value,
     required Color activeColor,
   }) {
@@ -1927,7 +2027,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: () => setState(() => _activeFilter = value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isActive ? activeColor : unselectedBg,
           borderRadius: BorderRadius.circular(24),
@@ -1936,12 +2036,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             width: 1.5,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: isActive ? Colors.white : unselectedText),
-            const SizedBox(width: 6),
-            Text(
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
               label,
               style: TextStyle(
                 color: isActive ? Colors.white : unselectedText,
@@ -1949,7 +2047,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

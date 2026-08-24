@@ -26,6 +26,11 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin file_picker, com.mr.flutter.plugin.filepicker.FilePickerPlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new co.quis.flutter_contacts.FlutterContactsPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin flutter_contacts, co.quis.flutter_contacts.FlutterContactsPlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new im.zoe.labs.flutter_notification_listener.FlutterNotificationListenerPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin flutter_notification_listener, im.zoe.labs.flutter_notification_listener.FlutterNotificationListenerPlugin", e);

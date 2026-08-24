@@ -1,74 +1,96 @@
-# Cipher (Khata) — Intelligent Automated Expense & Credit Tracker
+# 💳 Cipher — Intelligent Automated Expense & Credit Tracker
 
-[![Flutter Version](https://img.shields.io/badge/Flutter-3.x-blue.svg)](https://flutter.dev)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Android-brightgreen.svg)](https://android.com)
+<div align="center">
 
-**Cipher** (formerly Khata) is an open-source, 100% privacy-first automated expense and credit tracking application for Android. It uses intelligent **Bank SMS parsing** and a background **UPI Push Notification Listener** to automatically record your debits and incoming money credits in real time.
+  <img src="assets/logo.png" width="130" alt="Cipher App Icon" style="border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
+  <h3>A private, beautiful, 100% offline self-custody expense & credit tracker for Bank SMS and UPI payments.</h3>
+
+  <p>
+    <img src="https://img.shields.io/badge/PRIVACY-100%25%20ON--DEVICE%20OFFLINE-5865F2?style=for-the-badge&logo=shield&logoColor=white" alt="Privacy" />
+    <img src="https://img.shields.io/badge/STORAGE-SQLITE%20(ENCRYPTED)-8A2BE2?style=for-the-badge&logo=sqlite&logoColor=white" alt="Storage" />
+    <img src="https://img.shields.io/badge/PARSER-HYBRID%20REGEX%20%2B%20NLP-FF6B6B?style=for-the-badge" alt="Parser" />
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/NETWORK-0%25%20INTERNET%20REQUIRED-00C853?style=for-the-badge&logo=adguard&logoColor=white" alt="Network" />
+    <img src="https://img.shields.io/badge/PLATFORM-ANDROID-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform" />
+    <img src="https://img.shields.io/badge/FRAMEWORK-FLUTTER-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Framework" />
+  </p>
+
+</div>
 
 ---
 
-## 🌟 Key Features
+## 🌟 Overview
 
-### 1. 💬 Automated Bank SMS Tracker
-- Parses incoming and historical bank SMS messages using high-accuracy native regex patterns.
-- Automatically extracts **Amount (₹)**, **Merchant / Store Name**, **Date**, **Transaction Type (Debit vs Credit)**, and **Account Type (UPI, Bank, Credit Card)**.
+**Cipher** (Khata) is built from the ground up on **zero-trust, privacy-first, and self-custody principles**. Unlike cloud-based expense managers that upload your confidential financial messages and bank statements to remote servers, Cipher operates **100% locally on your physical device** without requiring cloud registration or unnecessary background sync.
 
-### 2. 🔔 PhonePe & Multi-UPI Push Notification Listener
-- Reads push notifications posted by major Indian UPI apps:
+Using high-precision regex parsing engines and a native background listener service, Cipher automatically detects debit SMS alerts, incoming UPI credits (PhonePe, GPay, Paytm, Navi, CRED), and presents an instant floating overlay to categorize your spending in seconds.
+
+---
+
+## ✨ Key Features
+
+### 1. 💬 Automated Bank SMS Parser
+- Parses incoming and historical bank SMS alerts using high-accuracy native regex patterns.
+- Automatically extracts **Amount (₹)**, **Merchant / Beneficiary**, **Date & Time**, **Transaction Type (Debit vs Credit)**, and **Source (UPI, Savings Bank, Credit Card)**.
+
+### 2. 🔔 Real-Time UPI Push Notification Listener
+- Captures instant push notifications posted by major Indian payment apps:
   - **PhonePe** (`com.phonepe.app`)
-  - **Navi UPI** (`com.navi.passport`, `com.navi.app`)
   - **Google Pay** (`com.google.android.apps.nbu.paisa.user`)
   - **Paytm** (`net.one97.paytm`)
+  - **Navi UPI** (`com.navi.passport`, `com.navi.app`)
   - **CRED** (`com.dreamplug.credpay`)
-  - **BHIM** (`in.org.npci.upiapp`)
-  - **Slice**, **Jupiter**, **Super.money**, **MobiKwik**, **Amazon Pay**, and **Bajaj Pay**.
-- Solves the common issue where bank SMS is delayed or missing for micro-UPI credits.
+  - **BHIM**, **Slice**, **Jupiter**, **Super.money**, **MobiKwik**, **Amazon Pay**, and **Bajaj Pay**.
+- Solves delayed or omitted bank SMS delivery for micro-UPI peer-to-peer payments.
 
-### 3. ⚡ Powerful Hybrid Deduplication Engine
-- Prevents double-counting when **both** a Bank SMS and a Push Notification arrive for the same payment.
-- Checks amount (±₹0.05) and transaction type within a rolling 5-minute window before creating a record.
+### 3. ⚡ Intelligent Deduplication Engine
+- Eliminates duplicate entries when **both** a Bank SMS and a UPI Push Notification trigger for the identical payment.
+- Matches transaction value (±₹0.05) and debit/credit flow within a rolling 5-minute deduplication window.
 
-### 4. 🪟 Real-Time System Overlay Window
-- Displays a non-intrusive floating system overlay window over other apps immediately after a transaction occurs.
-- Allows users to tag the **Purpose** (e.g. *"Dinner with friends"*) and **Recipient/Paid To** on the fly.
+### 4. 🪟 Instant System Overlay Window
+- Spawns a sleek, non-intrusive floating system overlay window over current apps immediately after a transaction occurs.
+- Quickly assign **Purpose / Notes** (e.g. *"Dinner with friends"*) and **Category / Beneficiary** on the fly.
 
 ### 5. 📊 Visual Analytics & Category Breakdown
-- **Today's Overview**: Real-time stats card showing today's spent vs today's received total.
-- **Category Charts**: Interactive donut charts (`fl_chart`) with percentage distribution across categories (Food, Shopping, Bills, Transport, etc.).
-- **Quick Date Filters**: Single-tap toggle for **Daily**, **Monthly**, **Last Month**, and **Custom Date Range (Calendar)**.
-- **Non-Confusing Month Selector**: Dedicated Month & Year picker dialog for selecting monthly expense summaries without day grids.
+- **Today's Overview**: Live summary card displaying today's spent vs incoming credit totals.
+- **Interactive Donut Charts**: Powered by `fl_chart` for granular category breakdown (Food, Shopping, Bills, Transport, etc.).
+- **Quick Filters & Custom Range**: Rapid toggle for **Daily**, **Monthly**, **Last Month**, and custom calendar date ranges.
+- **Dedicated Month-Year Selector**: Fast monthly expense auditing without tedious day grid clicks.
 
 ### 6. 🔄 GitHub In-App Auto-Updater
-- Automatically queries the GitHub Releases API on app startup.
-- Displays an in-app update popup with release notes and a direct download link whenever a new APK version is released.
+- Checks the GitHub Releases API on app startup for new releases.
+- Offers in-app update prompts with full changelogs and one-tap APK installation.
 
 ### 7. 🛡️ 100% On-Device Privacy
-- All SMS messages, notifications, and transaction logs stay strictly on your local device inside an SQLite database (`khata_expenses.db`).
-- Zero data collection, zero registration, and zero cloud requirement (optional Supabase sync can be enabled).
+- All parsed SMS messages, notification payloads, and logs are stored strictly inside your local SQLite database (`khata_expenses.db`).
+- Zero telemetry, zero external trackers, and zero third-party ads.
 
 ---
 
 ## 🛠️ Architecture & Tech Stack
 
-- **Framework**: [Flutter 3.x](https://flutter.dev) (Dart 3.x)
-- **Local Storage**: `sqflite` (SQLite), `shared_preferences`
-- **SMS Listening**: `telephony`
-- **Notification Listening**: `flutter_notification_listener`
-- **Background Overlay**: `flutter_overlay_window`
-- **Charts & Data Viz**: `fl_chart`
-- **AI Fallback Engine**: DeepSeek API (Optional NLP parsing)
-- **Cloud Sync**: Supabase Flutter SDK (Optional)
+| Component | Technology / Library |
+| :--- | :--- |
+| **Framework** | [Flutter](https://flutter.dev) (Dart 3.x) |
+| **Local Storage** | `sqflite` (SQLite Engine), `shared_preferences` |
+| **SMS Capture** | `telephony` |
+| **Notification Capture** | `flutter_notification_listener` |
+| **Floating Overlay** | `flutter_overlay_window` |
+| **Data Visualization** | `fl_chart` |
+| **AI Fallback (Optional)** | DeepSeek API (NLP message comprehension) |
+| **Cloud Sync (Optional)** | Supabase Flutter SDK |
 
 ---
 
-## 📱 Android Permission Requirements
+## 📱 Android Permissions
 
-| Permission | Purpose |
+| Permission | Reason / Purpose |
 | :--- | :--- |
 | `READ_SMS` & `RECEIVE_SMS` | Required to read and parse incoming bank transaction SMS messages |
-| `BIND_NOTIFICATION_LISTENER_SERVICE` | Required to detect incoming UPI credits from PhonePe, GPay, Paytm & Navi |
-| `SYSTEM_ALERT_WINDOW` | Required to open the quick transaction tagging overlay window over other apps |
+| `BIND_NOTIFICATION_LISTENER_SERVICE` | Required to capture incoming UPI credits from PhonePe, GPay, Paytm, Navi, etc. |
+| `SYSTEM_ALERT_WINDOW` | Required to display the floating transaction tagging overlay over other apps |
 
 ---
 
@@ -80,42 +102,43 @@
 - JDK 17+
 
 ### Steps
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/ajay8873/cipher.git
    cd cipher
    ```
 
-2. Fetch dependencies:
+2. **Install Flutter packages:**
    ```bash
    flutter pub get
    ```
 
-3. Run in Debug Mode on connected Android device:
+3. **Launch in Debug Mode:**
    ```bash
    flutter run -d <device_id>
    ```
 
-4. Build Release APK:
+4. **Build Production Release APK:**
    ```bash
    flutter build apk --release
    ```
-   The APK will be generated at `build/app/outputs/flutter-apk/app-release.apk`.
+   *The compiled APK will be located at `build/app/outputs/flutter-apk/app-release.apk`.*
 
 ---
 
-## 🌐 Deploying the Landing Page to Cloudflare Pages
+## 🌐 Web Landing Page Deployment
 
-The repository contains a production-ready static landing page in `web_landing/index.html`.
+A responsive web landing page is included in `web_landing/index.html`.
 
-### To Deploy on Cloudflare Pages:
-1. Connect your GitHub repository to **Cloudflare Pages**.
-2. Set **Build Output Directory** to `web_landing`.
-3. Set **Build Command** to empty (or `exit 0`).
-4. Save and deploy! Your website will be live at `https://cipher-khata.pages.dev`.
+### Deploying to Cloudflare Pages:
+1. Connect your repository to **Cloudflare Pages**.
+2. Set the **Build Output Directory** to `web_landing`.
+3. Set the **Build Command** to empty (or `exit 0`).
+4. Deploy to access live at `https://cipher-khata.pages.dev`.
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.
+

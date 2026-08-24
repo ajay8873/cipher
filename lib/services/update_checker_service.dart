@@ -163,8 +163,16 @@ class UpdateCheckerService {
             onPressed: () async {
               Navigator.pop(ctx);
               final targetUrl = Uri.parse(releaseInfo.downloadUrl);
-              if (await canLaunchUrl(targetUrl)) {
-                await launchUrl(targetUrl, mode: LaunchMode.externalApplication);
+              try {
+                final launched = await launchUrl(
+                  targetUrl,
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!launched) {
+                  await launchUrl(targetUrl, mode: LaunchMode.platformDefault);
+                }
+              } catch (e) {
+                print('Could not launch update URL: $e');
               }
             },
             style: ElevatedButton.styleFrom(

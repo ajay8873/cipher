@@ -96,6 +96,139 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     }
   }
 
+  void _showTermsDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C5CE7).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.privacy_tip_rounded, color: Color(0xFF6C5CE7), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Terms of Use & Privacy",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Detailed Privacy Practices & Platform Terms for Cipher:",
+                  style: TextStyle(fontSize: 13, height: 1.4, color: isDark ? Colors.white70 : Colors.black87),
+                ),
+                const SizedBox(height: 14),
+                _buildPolicyPoint(
+                  icon: Icons.phonelink_lock_rounded,
+                  title: "1. 100% On-Device Processing & Privacy",
+                  description:
+                      "Cipher is designed privacy-first. Your financial SMS messages, notifications, and transaction history are processed locally on your phone. We do NOT collect, sell, lease, or share your personal financial data with any third-party advertisers, data brokers, or external entities.",
+                ),
+                const SizedBox(height: 10),
+                _buildPolicyPoint(
+                  icon: Icons.security_rounded,
+                  title: "2. Exclusive Data Usage for App Services",
+                  description:
+                      "SMS & Notification access is used solely to parse debit/credit financial alerts (e.g. Bank SMS, PhonePe, GPay, Paytm) to automatically build your personal expense ledger. Non-financial messages, OTPs, promotional SMS, and personal chats are completely filtered out and ignored.",
+                ),
+                const SizedBox(height: 10),
+                _buildPolicyPoint(
+                  icon: Icons.cloud_done_rounded,
+                  title: "3. Future Cloud Service & Automatic Consent",
+                  description:
+                      "By agreeing to these terms, you grant explicit consent that if Cipher integrates cloud sync or backup services (such as Supabase, Encrypted Cloud Storage, or accredited infrastructure providers) in future app updates, your encrypted transaction data may be synced securely to provide multi-device access and cloud backup functionality.",
+                ),
+                const SizedBox(height: 10),
+                _buildPolicyPoint(
+                  icon: Icons.admin_panel_settings_rounded,
+                  title: "4. Right to Optimize & Manage Platform",
+                  description:
+                      "We reserve full rights to maintain, improve, update, and optimize parsing rules, application features, algorithms, security standards, and user interfaces to provide seamless service reliability.",
+                ),
+                const SizedBox(height: 10),
+                _buildPolicyPoint(
+                  icon: Icons.gavel_rounded,
+                  title: "5. Limitation of Liability",
+                  description:
+                      "Cipher is an automated expense ledger provided 'as-is' for informational purposes. Users remain solely responsible for verifying financial calculations, budgeting decisions, and tax reporting.",
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C5CE7),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text(
+                "Close",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPolicyPoint({required IconData icon, required String title, required String description}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: const Color(0xFF6C5CE7), size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.35,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -262,6 +395,22 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               cardColor: cardColor,
               onTap: () => _sendEmail(context),
               trailingIcon: Icons.send_rounded,
+            ),
+
+            const SizedBox(height: 12),
+
+            // Terms of Use & Privacy Policy Tile
+            _buildLinkTile(
+              context: context,
+              icon: Icons.privacy_tip_rounded,
+              iconBg: const Color(0xFF00CEC9).withOpacity(0.15),
+              iconColor: const Color(0xFF00CEC9),
+              label: "Terms of Use & Privacy Policy",
+              value: "Read Full Data & Cloud Terms",
+              isDark: isDark,
+              cardColor: cardColor,
+              onTap: () => _showTermsDialog(context),
+              trailingIcon: Icons.arrow_forward_ios_rounded,
             ),
 
             const SizedBox(height: 24),
