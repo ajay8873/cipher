@@ -4,7 +4,7 @@
 
   <img src="assets/logo.png" width="130" alt="Cipher App Icon" style="border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
 
-  <h3>A private, beautiful, 100% offline self-custody expense & credit tracker for Bank SMS and UPI payments.</h3>
+  <h3>A private, 100% offline self-custody expense & credit tracker for Bank SMS and UPI payments.</h3>
 
   <p>
     <img src="https://img.shields.io/badge/PRIVACY-100%25%20ON--DEVICE%20OFFLINE-5865F2?style=for-the-badge&logo=shield&logoColor=white" alt="Privacy" />
