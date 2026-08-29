@@ -23,7 +23,7 @@
 
 ## 🌟 Overview
 
-**Cipher** (Khata) is built from the ground up on **zero-trust, privacy-first, and self-custody principles**. Unlike cloud-based expense managers that upload your confidential financial messages and bank statements to remote servers, Cipher operates **100% locally on your physical device**.
+**Cipher**  is built from the ground up on **zero-trust, privacy-first, and self-custody principles**. Unlike cloud-based expense managers that upload your confidential financial messages and bank statements to remote servers, Cipher operates **100% locally on your physical device**.
 
 > [!NOTE]
 > **Network Transparency**: Cipher only uses internet connectivity to query the GitHub Releases API for **in-app updates**. Your financial data, bank SMS messages, and transaction records are **never uploaded, synced, or transmitted anywhere**.
